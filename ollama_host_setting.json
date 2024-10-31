@@ -1,7 +1,0 @@
-curl http://localhost:11434/api/generate -d '{
-    "model": "deepseek-coder-v2:latest",
-    "prompt": "Why is the sky blue?",
-    "options": {
-      "num_ctx": 16384
-    }
-  }'
