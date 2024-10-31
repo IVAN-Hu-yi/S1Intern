@@ -78,7 +78,7 @@ class HDattractor(DefaultParameters):
         self.recurrent_column_weight = np.zeros(self.n)
 
 
-        if self.operation_runenschrift: # ??? 
+        if self.operation_runenschrift: # ??? seem very different from the journal paper
             Uf = np.fft.fft(U0)
             Ff = np.fft.fft(F0)
             Wf = (Uf * Ff) /(self._lambda + np.abs(Ff)**2)
@@ -92,10 +92,10 @@ class HDattractor(DefaultParameters):
         
         return self.recurrent_column_weight
 
-    def get_velocity(self):
+    def get_angular_velocity(self):
         pass
 
-    def get_acceleration(self):
+    def get_angular_acceleration(self):
         pass
 
     def get_position(self):
@@ -117,3 +117,4 @@ class HDattractor(DefaultParameters):
         update the recurrent weights of the HD neurons
         '''
         
+        return self.recurrent_column_weight - self.time_constant_HD * self.get_angular_velocity()*self.get_angular_acceleration()
