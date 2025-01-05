@@ -8,11 +8,11 @@ def vonmisespdf(x, mu, k):
     """
     
     # Convert degrees to radians by multiplying by pi/180
-    x_rad = np.deg2rad(x)
-    mu_rad = np.deg2rad(mu)
+    # x_rad = np.deg2rad(x)
+    # mu_rad = np.deg2rad(mu)
     
     # Compute the PDF in log space
-    log_term = k * np.cos((np.pi / 180) * (x_rad - mu_rad))
+    log_term = k * np.cos((np.pi / 180) * (x - mu))
     constant_term = np.log(360) + np.log(i0(k)) + k
     
     # Compute the exponential of the log term minus the constant term
