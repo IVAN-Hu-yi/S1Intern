@@ -65,13 +65,15 @@ class ALBcells():
         self.U_arep_p = self.U_arep.copy()
         self.F_arep_p = self.F_arep.copy()
 
-    def update_U_arep(self, VisualModule:visualCells, curr_time:int):
+    def update_U_arep(self, VisualModule:visualCells, curr_time:int, weights = None):
         '''
         Update the abstract representation units
         '''
+        if weights is None:
+            weights = self.W_vis2aLB
 
         # Update the abstract representation units
-        visualComponent = self.params.Uv_gain_factor * VisualModule.neural_attention * VisualModule.F_visual @ self.W_vis2aLB.T
+        visualComponent = self.params.Uv_gain_factor * VisualModule.neural_attention * VisualModule.F_visual @ weights.T
 
         modulatedVisualComponent = self.theta_ff[curr_time] * visualComponent
         lateralInhibition = self.params.inhibition_U_arep * self.F_arep @ self.Inhibition_U_arep.T

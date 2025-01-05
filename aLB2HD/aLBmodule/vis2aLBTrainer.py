@@ -8,9 +8,10 @@ from tqdm import tqdm
 import numpy as np
 from HD.HDRing import HDattractor
 from scipy.io import loadmat
+from utilities.AngularDiff import AngularDiff
 
 
-class aLBTrainer():
+class vis2aLBPathway():
 
     def __init__(self, 
                  params:DefaultParameters, 
@@ -73,17 +74,17 @@ class aLBTrainer():
         previous_env = 0
 
         # data collection
-        # weights
-        if mode == 'all':
-            recordTimePoints = int(self.T_len/interval)
-            self.vis2ALBweights = np.zeros((recordTimePoints, self.params.N_abstract, self.params.N_input))
-            # firing rates
-            self.aLB_fr = np.zeros((recordTimePoints, self.params.N_abstract))
+        if store: 
+            if mode == 'all':
+                recordTimePoints = int(self.T_len/interval)
+                self.vis2ALBweights = np.zeros((recordTimePoints, self.params.N_abstract, self.params.N_input))
+                # firing rates
+                self.aLB_fr = np.zeros((recordTimePoints, self.params.N_abstract))
 
-        elif mode == 'last':
-            start_idx = self.T_len - last_nb
-            self.vis2ALBweights = np.zeros((last_nb, self.params.N_abstract, self.params.N_input))
-            self.aLB_fr = np.zeros((last_nb, self.params.N_abstract))
+            elif mode == 'last':
+                start_idx = self.T_len - last_nb
+                self.vis2ALBweights = np.zeros((last_nb, self.params.N_abstract, self.params.N_input))
+                self.aLB_fr = np.zeros((last_nb, self.params.N_abstract))
 
         for i in tqdm(range(self.T_len), desc='Training'):
             
@@ -118,50 +119,141 @@ class aLBTrainer():
             # weight update
             self.ALBModule.vis2aLB_weight_update(self.VisualModule, i)
             
-            # store data
-            if mode == 'all':
-                if store and i % interval == 0:
-                    self.vis2ALBweights[i // interval] = self.ALBModule.W_vis2aLB.copy()
-                    self.aLB_fr[i // interval] = self.ALBModule.F_arep.copy()
-            
-            if mode == 'last':
-                if i >= start_idx:
-                    idx = i - start_idx
-                    self.vis2ALBweights[idx] = self.ALBModule.W_vis2aLB.copy()
-                    self.aLB_fr[idx] = self.ALBModule.F_arep.copy()
+            if store:
+                if mode == 'all':
+                    if store and i % interval == 0:
+                        self.vis2ALBweights[i // interval] = self.ALBModule.W_vis2aLB.copy()
+                        self.aLB_fr[i // interval] = self.ALBModule.F_arep.copy()
+                
+                if mode == 'last':
+                    if i >= start_idx:
+                        idx = i - start_idx
+                        self.vis2ALBweights[idx] = self.ALBModule.W_vis2aLB.copy()
+                        self.aLB_fr[idx] = self.ALBModule.F_arep.copy()
+        print('Training completed')
+
+    def _clear_data(self):
+
+        # reset ALB cells
+        self.ALBModule.F_arep = np.zeros(self.ALBModule.F_arep.shape)
+        self.ALBModule.U_arep = np.zeros(self.ALBModule.U_arep.shape)
+        self.ALBModule.F_arep_p = np.zeros(self.ALBModule.F_arep_p.shape)
+        self.ALBModule.U_arep_p = np.zeros(self.ALBModule.U_arep_p.shape)
+
+        # reset visual cells
+        self.VisualModule.F_visual = np.zeros(self.VisualModule.F_visual.shape)
+        self.VisualModule.F_visal_p = np.zeros(self.VisualModule.F_visal_p.shape)
+
+        # clear timeline storage
+        self.vis2ALBweights = None
+        self.aLB_fr = None
         
-    def save_data(self, filepath, store=True):
+    def test(self, store=False):
+        '''
+        Test the aLB module by updating vis2aLB weights with lateral inhibition
+        
+        Parameters
+        ----------
+        filepath : str
+            path to store the data
+        store : bool, optional
+            check if store the data, by default False
+        '''
 
-        def checkfilepath_or_create(path):
-            if os.path.exists(path):
-                pass
-            else:
-                os.makedirs(path)
+        print('Start testing the aLB module')
 
-        # create data path
-        checkfilepath_or_create(filepath)
+        ## parameters
+        # time handling
+        start_time = 0
+        end_time = 60
+        test_idicies = np.arange(start_time, end_time+self.params.dt, self.params.dt)
+        cycle = 10
+        vlcty = 360 * cycle / (end_time - start_time)
+        self.testing_T_len = len(test_idicies)
+
+        # Angle handling
+        bin_width_multiplier = 1
+        bar_angle_gap = bin_width_multiplier * self.params.angle_gap # bin width
+        bar_angle = np.arange(-180, 180+bar_angle_gap, bar_angle_gap)
+
+        # data collection
+        recorded_aLB_fr = np.zeros((self.testing_T_len, self.params.N_abstract))
+
+        # test HD trajectory
+        self.test_HD_trajectory = np.zeros(self.testing_T_len)
+
+        for i in tqdm(range(self.testing_T_len), desc='Testing'):
+            # time handling
+            curr_time_global = 0 + (i+1) * self.params.dt
+
+            # env handling
+            present_env = 0
+
+            # HD trajectory update
+            self.test_HD_trajectory[i] = AngularDiff(self.test_HD_trajectory[i-1] + vlcty * self.params.dt, 0) 
+            # store previous values
+            self.VisualModule.store_as_previous()
+            self.ALBModule.store_as_previous()
+
+            # update the visual module
+            self.VisualModule.update_F_visual(self.HDModule.trajectory, present_env-1, i)
+
+            # update the aLB module
+            self.ALBModule.update_U_arep(self.VisualModule, i)
+            self.ALBModule.update_F_arep()
+
+            # store the firing rate
+            if store:
+                recorded_aLB_fr[i] = self.ALBModule.F_arep.copy()
+
+    def checkfilepath_or_create(self, path):
+        if os.path.exists(path):
+            pass
+        else:
+            os.makedirs(path)
+
+    def save_training_data(self, filepath, store=True):
+
+        print('Start saving the training data') 
+        self.checkfilepath_or_create(filepath)
 
         # store visual
         rp = filepath + '/visualComponent'
-        checkfilepath_or_create(rp) 
+        self.checkfilepath_or_create(rp) 
         np.save(rp+'/F_visual.npy', self.VisualModule.F_visual)
         np.save(rp+'/F_featural_attention.npy', self.VisualModule.Inputs.F_visual_feature)
         
         # store aLB cells
         rp = filepath + '/aLB'
-        checkfilepath_or_create(rp)
+        self.checkfilepath_or_create(rp)
         np.save(rp+'/vis2aLBWeights.npy', self.ALBModule.W_vis2aLB)
         np.save(rp+'/aLB_fr.npy', self.ALBModule.F_arep)
 
         # store timeline changes
         if store:
             rp = filepath + '/timeline'
-            checkfilepath_or_create(rp)
+            self.checkfilepath_or_create(rp)
             np.save(rp+'/vis2aLBWeights.npy', self.vis2ALBweights)
             np.save(rp+'/aLB_fr.npy', self.aLB_fr)
             # corresponding HD trajectory
             np.save(rp+'/HDtrajectory.npy', self.HDModule.trajectory)
 
+    def save_testing_data(self, filepath):
+
+        print('Start saving the testing data')
+        self.checkfilepath_or_create(path=filepath)
+
+        # store aLB cells
+        rp = filepath + '/aLB'
+        self.checkfilepath_or_create(rp)
+        np.save(rp+'/aLB_fr.npy', self.aLB_fr)
+
+        # store HD trajectory
+        rp = filepath + '/HD'
+        self.checkfilepath_or_create(rp)
+        np.save(rp+'/HDtrajectory.npy', self.test_HD_trajectory)
+
+        print('Data saved')
 
 
 def main():
@@ -186,11 +278,15 @@ def main():
     filename = 'aLBcells-for-HDsystem/RealData_CIRC_Manson/RealData_CIRC_Manson1.mat'
     HDdata = loadmat(filename) 
 
-    trainer = aLBTrainer(params, duration, N_env, N_cue, Cue_Init, Strength_Init, firingrate_cirterion, HDdata, wandering, wanderingTime )
+    vis2aLB = vis2aLBPathway(params, duration, N_env, N_cue, Cue_Init, Strength_Init, firingrate_cirterion, HDdata, wandering, wanderingTime )
 
-    trainer.train(store=store, interval=interval, mode=mode, last_nb=last_nb)
+    vis2aLB.train(store=False, interval=interval, mode=mode, last_nb=last_nb)
     
-    trainer.save_data('data', store=store)
+    vis2aLB.save_training_data('data/train', store=False)
+
+    vis2aLB.test(store=True)
+
+    vis2aLB.save_testing_data(filepath='data/test')
 
 if __name__ == '__main__':
     main() 
