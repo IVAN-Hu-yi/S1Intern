@@ -1,5 +1,9 @@
-demo.ipynb
 aLBcells-for-HDsystem/
 .gitignore
 data
-./__pycache__/
+*/__pycache__/
+*/.ipynb_checkpoints/
+*/.DS_Store
+*/.vscode/
+*/.pytest
+*.ipynb

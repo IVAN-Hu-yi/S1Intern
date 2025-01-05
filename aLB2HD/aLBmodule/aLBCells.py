@@ -72,12 +72,15 @@ class ALBcells():
 
         # Update the abstract representation units
         visualComponent = self.params.Uv_gain_factor * VisualModule.neural_attention * VisualModule.F_visual @ self.W_vis2aLB.T
+
         modulatedVisualComponent = self.theta_ff[curr_time] * visualComponent
         lateralInhibition = self.params.inhibition_U_arep * self.F_arep @ self.Inhibition_U_arep.T
         
         modulatedVisualComponent = modulatedVisualComponent.flatten()
 
-        self.U_arep += self.U_arep + self.params.decay_rate_arep * (self.theta_ff[curr_time] * modulatedVisualComponent - lateralInhibition - self.U_arep)
+        self.U_arep += self.params.decay_rate_arep * (self.theta_ff[curr_time] * modulatedVisualComponent - lateralInhibition - self.U_arep)
+
+        self.curr_time = curr_time
 
     def update_F_arep(self):
         '''
