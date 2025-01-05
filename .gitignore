@@ -2,3 +2,4 @@ demo.ipynb
 aLBcells-for-HDsystem/
 .gitignore
 data
+./__pycache__/
