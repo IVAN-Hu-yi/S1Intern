@@ -55,8 +55,12 @@ class ALBcells():
         # uniorm distribution
 
         self.W_vis2aLB = np.random.rand(self.params.N_abstract, self.params.N_input)
-        tot = np.sum(self.W_vis2aLB**2, axis=1) 
-        self.W_vis2aLB = self.W_vis2aLB / tot[:, None] * self.params.Wv_weight_scale
+        tot = np.sqrt(np.sum(self.W_vis2aLB**2, axis=1, keepdims=True))
+        self.W_vis2aLB /= tot
+        self.W_vis2aLB *= self.params.Wv_weight_scale
+        self.W_vis2aLB[self.W_vis2aLB < 0.01] = 0
+        from scipy.sparse import csr_matrix
+        self.W_vis2aLB = csr_matrix(self.W_vis2aLB)
 
     def _initialised_lateral_inhibition_weight(self):
         self.Inhibition_U_arep = self.params.Inhibition_U_arep
@@ -77,18 +81,21 @@ class ALBcells():
 
         modulatedVisualComponent = self.theta_ff[curr_time] * visualComponent
         lateralInhibition = self.params.inhibition_U_arep * self.F_arep @ self.Inhibition_U_arep.T
-        
-        modulatedVisualComponent = modulatedVisualComponent.flatten()
 
-        self.U_arep += self.params.decay_rate_arep * (self.theta_ff[curr_time] * modulatedVisualComponent - lateralInhibition - self.U_arep)
+        visualInput = np.asarray(modulatedVisualComponent).flatten() 
+
+        self.U_arep += self.params.decay_rate_arep * (self.theta_ff[curr_time] * visualInput - lateralInhibition - self.U_arep)
 
         self.curr_time = curr_time
 
-    def update_F_arep(self):
+    def update_F_arep(self, test = False):
         '''
         Update the feature abstract units
         '''
-        self.F_arep = firing_rate_sigmoid(self.U_arep, self.params.alpha_arep, self.params.beta_arep, self.params.gamma_arep)
+        if test:
+            self.F_arep = firing_rate_sigmoid(self.U_arep_p, self.params.alpha_arep, self.params.beta_arep, self.params.gamma_arep)
+        else:
+            self.F_arep = firing_rate_sigmoid(self.U_arep, self.params.alpha_arep, self.params.beta_arep, self.params.gamma_arep)
 
     def vis2aLB_weight_update(self, VisualModule:visualCells, curr_time:int):
         '''

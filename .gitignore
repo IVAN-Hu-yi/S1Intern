@@ -1,9 +1,14 @@
 aLBcells-for-HDsystem/
 .gitignore
 data
-*/__pycache__/
 */.ipynb_checkpoints/
 */.DS_Store
 */.vscode/
 */.pytest
 *.ipynb
+*.pyc
+*/__pycache__/
+*/.mypy_cache/
+*/.pytest_cache/
+*/.coverage
+*/.pytest

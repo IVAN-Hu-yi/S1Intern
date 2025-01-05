@@ -142,7 +142,6 @@ class vis2aLBPathway():
 
         # reset visual cells
         self.VisualModule.F_visual = np.zeros(self.VisualModule.F_visual.shape)
-        self.VisualModule.F_visal_p = np.zeros(self.VisualModule.F_visal_p.shape)
 
         # clear timeline storage
         self.vis2ALBweights = None
@@ -162,6 +161,8 @@ class vis2aLBPathway():
 
         print('Start testing the aLB module')
 
+        self._clear_data()
+
         ## parameters
         # time handling
         start_time = 0
@@ -177,35 +178,51 @@ class vis2aLBPathway():
         bar_angle = np.arange(-180, 180+bar_angle_gap, bar_angle_gap)
 
         # data collection
-        recorded_aLB_fr = np.zeros((self.testing_T_len, self.params.N_abstract))
+        self.recorded_aLB_fr = np.zeros((len(bar_angle), self.params.N_abstract))
 
         # test HD trajectory
         self.test_HD_trajectory = np.zeros(self.testing_T_len)
 
-        for i in tqdm(range(self.testing_T_len), desc='Testing'):
+        # load weights
+        if os.path.exists('data/train/aLB/vis2aLBweights.npy'):
+            weights = np.load('data/train/aLB/vis2aLBweights.npy')
+        else:
+            weights = None
+        
+        for i in tqdm(range(self.testing_T_len-1), desc='Testing'):
+
+            # HD handling
+            self.test_HD_trajectory[i+1] = AngularDiff( self.test_HD_trajectory[i] + vlcty * self.params.dt, 0)
+
             # time handling
             curr_time_global = 0 + (i+1) * self.params.dt
 
             # env handling
             present_env = 0
 
-            # HD trajectory update
-            self.test_HD_trajectory[i] = AngularDiff(self.test_HD_trajectory[i-1] + vlcty * self.params.dt, 0) 
             # store previous values
             self.VisualModule.store_as_previous()
             self.ALBModule.store_as_previous()
 
             # update the visual module
-            self.VisualModule.update_F_visual(self.HDModule.trajectory, present_env-1, i)
+            self.VisualModule.update_F_visual(self.test_HD_trajectory, present_env, i)
 
             # update the aLB module
-            self.ALBModule.update_U_arep(self.VisualModule, i)
+            self.ALBModule.update_U_arep(self.VisualModule, i, weights=weights)
             self.ALBModule.update_F_arep()
 
             # store the firing rate
             if store:
-                recorded_aLB_fr[i] = self.ALBModule.F_arep.copy()
-
+                present_HD = self.test_HD_trajectory[i+1]
+                mask = (present_HD >= bar_angle) & (present_HD < ( bar_angle + bar_angle_gap ))
+                indcies = np.where(mask)[0]
+                if indcies.size > 0:
+                    idx = indcies[0]
+                    self.recorded_aLB_fr[idx, :] += self.ALBModule.F_arep.copy()
+        
+        self.norm_recorded_aLB_fr = self.recorded_aLB_fr.T * self.params.dt/((end_time - start_time) / (360/bar_angle_gap))
+        print('Testing completed')
+        
     def checkfilepath_or_create(self, path):
         if os.path.exists(path):
             pass
@@ -246,7 +263,8 @@ class vis2aLBPathway():
         # store aLB cells
         rp = filepath + '/aLB'
         self.checkfilepath_or_create(rp)
-        np.save(rp+'/aLB_fr.npy', self.aLB_fr)
+        np.save(rp+'/aLB_fr.npy', self.recorded_aLB_fr)
+        np.save(rp+'/norm_aLB_fr.npy', self.norm_recorded_aLB_fr)
 
         # store HD trajectory
         rp = filepath + '/HD'
@@ -260,7 +278,7 @@ def main():
 
     params = DefaultParameters()
 
-    duration = 60*20
+    duration = 60*20 
     N_env = 1
     N_cue = 2
     Cue_Init = np.ones((N_env, N_cue))*360 - 360
