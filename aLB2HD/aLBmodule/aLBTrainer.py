@@ -63,7 +63,7 @@ class aLBTrainer():
         print(f'nb of timepoints to shift:{len(self.params.time_CueShifting)}')
 
 
-    def train(self, store=False):
+    def train(self, store=False, interval=50, mode='all', last_nb:int=10000):
         '''
         Training the aLB module to obtain the abstract Landmark-based representation by updating vis2aLB weights with lateral inhibition
         '''
@@ -73,10 +73,16 @@ class aLBTrainer():
 
         # data collection
         # weights
-        self.vis2ALBweights = np.zeros((self.T_len, self.params.N_abstract, self.params.N_input))
-        # firing rates
-        self.aLB_fr = np.zeros((self.T_len, self.params.N_abstract))
+        if mode == 'all':
+            recordTimePoints = int(self.T_len/interval)
+            self.vis2ALBweights = np.zeros((recordTimePoints, self.params.N_abstract, self.params.N_input))
+            # firing rates
+            self.aLB_fr = np.zeros((recordTimePoints, self.params.N_abstract))
 
+        elif mode == 'last':
+            start_idx = self.T_len - last_nb
+            self.vis2ALBweights = np.zeros((last_nb, self.params.N_abstract, self.params.N_input))
+            self.aLB_fr = np.zeros((last_nb, self.params.N_abstract))
 
         for i in tqdm(range(self.T_len), desc='Training'):
             
@@ -110,11 +116,18 @@ class aLBTrainer():
 
             # weight update
             self.ALBModule.vis2aLB_weight_update(self.VisualModule, i)
-
-            if store:
-                self.vis2ALBweights[i] = self.ALBModule.W_vis2aLB.copy()
-                self.aLB_fr[i] = self.ALBModule.F_arep.copy()
-
+            
+            # store data
+            if mode == 'all':
+                if store and i % interval == 0:
+                    self.vis2ALBweights[i // interval] = self.ALBModule.W_vis2aLB.copy()
+                    self.aLB_fr[i // interval] = self.ALBModule.F_arep.copy()
+            
+            if mode == 'last':
+                if i >= start_idx:
+                    idx = i - start_idx
+                    self.vis2ALBweights[idx] = self.ALBModule.W_vis2aLB.copy()
+                    self.aLB_fr[idx] = self.ALBModule.F_arep.copy()
         
     def save_data(self, filepath, store=True):
 
@@ -163,15 +176,20 @@ def main():
     wandering = 0
     wanderingTime = 10
 
+    # data storage
+    store = True
+    interval = 10 # interval of storing data
+    mode = 'last' # 'all' or 'last' mode of storing data
+    last_nb = 10000 # number of last timepoints to store
 
     filename = 'aLBcells-for-HDsystem/RealData_CIRC_Manson/RealData_CIRC_Manson1.mat'
     HDdata = loadmat(filename) 
 
     trainer = aLBTrainer(params, duration, N_env, N_cue, Cue_Init, Strength_Init, firingrate_cirterion, HDdata, wandering, wanderingTime )
 
-    trainer.train(store=True)
+    trainer.train(store=store, interval=interval, mode=mode, last_nb=last_nb)
     
-    trainer.save_data('data')
+    trainer.save_data('data', store=store)
 
 if __name__ == '__main__':
     main() 
