@@ -141,7 +141,7 @@ class HDattractor(DefaultParameters):
         return the trajectory of the HD neurons
         '''
         initiation = np.round(self.beginning / self.dt_exp)
-        self.trajectory = self.real_hdTrajectory[int(initiation): int(self.T_len + initiation)]
+        self.trajectory = self.real_hdTrajectory[int(initiation): int(self.T_len + initiation)+1]
         trajectory_0 = self.real_hdTrajectory[0]
         self.real_hdTrajectory[0] = 0
 

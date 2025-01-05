@@ -51,6 +51,7 @@ class aLBTrainer():
 
         # HD data
         self.HDModule.set_HD_trajectory(HDdata) # set the HD trajectory
+        print(f'HD trajectory shape: {self.HDModule.trajectory.shape}')
 
         print('aLBTrainer initialized')
 
