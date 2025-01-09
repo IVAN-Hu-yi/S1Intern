@@ -16,4 +16,4 @@ class gRSCLayer():
         self.U_gRSC = np.zeros((self.params.N_bin))
         self.F_gRSC = np.zeros((self.params.N_bin))
 
-        self._gRSC_to_dRSC_weight = 
+        self._gRSC_to_dRSC_weight = np.eye(self.params.N_bin) * 1

@@ -77,14 +77,13 @@ class ALBcells():
             weights = self.W_vis2aLB
 
         # Update the abstract representation units
-        visualComponent = self.params.Uv_gain_factor * VisualModule.neural_attention * VisualModule.F_visual @ weights.T
-
+        visualComponent = self.params.Uv_gain_factor * VisualModule.neural_attention * VisualModule.F_visual_p @ weights.T
         modulatedVisualComponent = self.theta_ff[curr_time] * visualComponent
-        lateralInhibition = self.params.inhibition_U_arep * self.F_arep @ self.Inhibition_U_arep.T
-
         visualInput = np.asarray(modulatedVisualComponent).flatten() 
 
-        self.U_arep += self.params.decay_rate_arep * (self.theta_ff[curr_time] * visualInput - lateralInhibition - self.U_arep)
+        lateralInhibition = self.params.inhibition_U_arep * self.F_arep @ self.Inhibition_U_arep.T
+
+        self.U_arep = self.U_arep_p + self.params.decay_rate_arep * (visualInput - lateralInhibition - self.U_arep_p)
 
         self.curr_time = curr_time
 
@@ -102,14 +101,13 @@ class ALBcells():
         Update the weight from visual to abstract layer
         '''
         self.W_vis2aLB *= (1 - self.params.dr_weight_visual)
-        self.W_vis2aLB = mOSA(self.W_vis2aLB, self.lr, self.F_arep, VisualModule.F_visal_p, self.theta_ff[curr_time], self.theta_fb[curr_time])
+        self.W_vis2aLB = mOSA(self.W_vis2aLB, self.lr, self.F_arep, VisualModule.F_visual_p, self.theta_ff[curr_time], self.theta_fb[curr_time])
     
     def update_lr(self, curr_time, present_time_global, stop_learning_time):
         '''
         update the learning rate
         '''
-        if present_time_global <= stop_learning_time:
-            self.lr = self.params.lr_initial_rate_visual * np.exp(-self.params.lr_decay_rate_visual * curr_time * self.params.dt)
+        self.lr =( present_time_global <= stop_learning_time ) * self.params.lr_initial_rate_visual * np.exp(-self.params.lr_decay_rate_visual * curr_time * self.params.dt)
 
 
 

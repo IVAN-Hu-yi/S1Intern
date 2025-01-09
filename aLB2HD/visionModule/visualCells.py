@@ -100,7 +100,7 @@ class visualCells(DefaultParameters):
         '''
         store the current visual field as the previous visual field
         '''
-        self.F_visal_p = self.F_visual.copy()
+        self.F_visual_p = self.F_visual.copy()
 
     def update_F_visual(self, trajectory, present_env, curr_time): 
         '''

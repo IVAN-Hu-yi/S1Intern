@@ -23,8 +23,8 @@ class HDattractor(DefaultParameters):
         self.number = self.N_bin
         # self-connections weights of the HD neurons
         self._get_recurrent_column_weights()
-        self._circular_matrix(),
-        self._circular_shift()
+        # self._circular_matrix(),
+        # self._circular_shift()
         self._clear_rotations()
         self.dw_t = np.zeros((self.recurrent_column_weight.shape))
         self.Operation_Cyaegha = Operation_Cyaegha
