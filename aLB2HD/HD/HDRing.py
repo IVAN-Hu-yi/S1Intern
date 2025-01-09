@@ -20,38 +20,46 @@ class HDattractor(DefaultParameters):
         n: number of neurons
         '''
         super().__init__()
-        self.n = self.N_bin
+        self.number = self.N_bin
         # self-connections weights of the HD neurons
-        # self._get_recurrent_column_weights()
-        # self._circular_matrix()
-        # self.dw_t = np.zeros((self.recurrent_column_weight.shape))
+        self._get_recurrent_column_weights()
+        self._circular_matrix(),
+        self._circular_shift()
+        self._clear_rotations()
+        self.dw_t = np.zeros((self.recurrent_column_weight.shape))
         self.Operation_Cyaegha = Operation_Cyaegha
 
     def _circular_matrix(self):
         '''
         return a rotation matrix R
         '''
-        R = np.zeros((self.n, self.n))
+        R = np.zeros(( self.number, self.number ))
         R[0, -1] = 1
-        R[1:, :self.n-1] = np.eye(self.n-1)
-        self.rotations = [np.identity(self.n)]
-        for i in range(1, self.n):
+        R[1:, :self.number-1] = np.eye(self.number-1)
+        self.rotations = [np.identity(self.number)]
+        for i in range(1, self.number):
             self.rotations.append(np.linalg.matrix_power(R, i))
     
-    def _circular_shift(self, x):
+    def _clear_rotations(self):
+        '''
+        clear the rotation matrix R
+        '''
+        self.rotations = None
+        
+    def _circular_shift(self, x = None):
         '''
         circular shift of the vector x and return a weight matrix W
 
         x: estimated column vector of W_HD
         '''
+        if x is None:
+            x = self.recurrent_column_weight # default value
+
         x = x.reshape(-1, 1)
         columns = [x]
-        for i in range(1, self.n):
+        for i in range(1, self.number):
             columns.append(self.rotations[i] @ x)
-        W = np.hstack(columns)
-
-        return W
-        
+        self.W = np.hstack(columns)
 
     def _get_recurrent_column_weights(self):
         '''
@@ -68,7 +76,7 @@ class HDattractor(DefaultParameters):
         # get activation level from the firing rate
         U0 = inverseFR_sigmoid(F0, self.alpha_HD, self.beta_HD, self.gamma_HD)
         self.U0 = U0
-        self.recurrent_column_weight = np.zeros(self.n)
+        self.recurrent_column_weight = np.zeros(self.number)
 
         Uf = np.fft.fft(U0)
         Ff = np.fft.fft(F0)

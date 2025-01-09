@@ -8,6 +8,7 @@ from utilities.FiringRate_sigmoid import firing_rate_sigmoid
 from utilities.Learning import mOSA
 from HD.HDRing import HDattractor
 from tqdm import tqdm
+from scipy.sparse import csr_matrix
 
 
 class ALBcells():
@@ -59,7 +60,6 @@ class ALBcells():
         self.W_vis2aLB /= tot
         self.W_vis2aLB *= self.params.Wv_weight_scale
         self.W_vis2aLB[self.W_vis2aLB < 0.01] = 0
-        from scipy.sparse import csr_matrix
         self.W_vis2aLB = csr_matrix(self.W_vis2aLB)
 
     def _initialised_lateral_inhibition_weight(self):

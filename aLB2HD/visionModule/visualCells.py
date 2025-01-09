@@ -150,7 +150,7 @@ def main():
         plt.plot(visualFeatures[i, :], label=f'{i}', color=colors[i])
     plt.legend()
     plt.show()
-   
+ 
 
 
 if __name__ == "__main__":
