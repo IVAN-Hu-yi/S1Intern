@@ -10,7 +10,7 @@ class DefaultParameters:
 
         # Time interval (seconds)
         self.dt_exp = 0.02
-        self.Operation_Noatun = False
+        self.Operation_Noatun = True 
         self.dt = 0.002 if self.Operation_Noatun else self.dt_exp
         
         self.Time = np.arange(0, self.time + self.dt_exp, self.dt_exp)  # Time points
