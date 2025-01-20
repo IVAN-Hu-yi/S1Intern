@@ -1,5 +1,5 @@
 aLBcells-for-HDsystem/
-.gitignore
+gitignore
 data
 */.ipynb_checkpoints/
 */.DS_Store
